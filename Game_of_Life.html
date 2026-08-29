@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Game of Life</title>
+    <style>
+        body {
+            background: #0a1120;
+            color: #d6e4f2;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        canvas {
+            background: #0a1120;
+            border: 1px solid #1c2a3d;
+        }
+
+        button {
+            font-family: monospace;
+            background: #0d1420;
+            color: #d6e4f2;
+            border: 1px solid #1c2a3d;
+            padding: 8px 14px;
+            margin: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            border-color: #4fa8ff;
+            color: #9cd4ff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Conway's Game of Life</h1>
+    <canvas id="grid" width="600" height="600"></canvas>
+
+    <div style="margin-top: 12px;">
+        <button id="stepBtn">Step</button>
+        <button id="playBtn">Play</button>
+        <button id="clearBtn">Clear</button>
+        <button id="randomBtn">Random</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('grid');
+        const ctx = canvas.getContext('2d');
+
+        const numColumns = 30;
+        const numRows = 30;
+        const cellSize = canvas.width / numColumns; // how big each square is, in pixels
+
+        // grid[row][col] will be 0 (dead) or 1 (alive)
+        let grid = [];
+        for (let row = 0; row < numRows; row++) {
+            let newRow = [];
+            for (let col = 0; col < numColumns; col++) {
+                newRow.push(0); // start everything dead
+            }
+            grid.push(newRow);
+        }
+
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // wipe the canvas clean
+
+            for (let row = 0; row < numRows; row++) {
+                for (let col = 0; col < numColumns; col++) {
+                    if (grid[row][col] === 1) {
+                        ctx.fillStyle = "#4fa8ff"; // blue for alive cells
+                        ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+        }
+
+        drawGrid();
+
+        canvas.addEventListener("click", function (event) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+
+            const col = Math.floor(mouseX / cellSize);
+            const row = Math.floor(mouseY / cellSize);
+
+            // flip that cell: 0 becomes 1, 1 becomes 0
+            grid[row][col] = grid[row][col] === 0 ? 1 : 0;
+
+            drawGrid();
+        });
+
+        function nextGeneration() {
+            // start with a brand new empty grid to hold the result
+            let newGrid = [];
+            for (let row = 0; row < numRows; row++) {
+                newGrid.push(new Array(numColumns).fill(0));
+            }
+
+            for (let row = 0; row < numRows; row++) {
+                for (let col = 0; col < numColumns; col++) {
+                    const liveNeighbors = countLiveNeighbors(row, col);
+                    const isAlive = grid[row][col] === 1;
+
+                    if (isAlive && (liveNeighbors === 2 || liveNeighbors === 3)) {
+                        newGrid[row][col] = 1; // survives
+                    } else if (!isAlive && liveNeighbors === 3) {
+                        newGrid[row][col] = 1; // born
+                    }
+                    // otherwise it stays 0 (dead) — already the default
+                }
+            }
+
+            grid = newGrid; // replace the old grid with the new one
+            drawGrid();
+        }
+
+        function countLiveNeighbors(row, col) {
+            let count = 0;
+            for (let rowOffset = -1; rowOffset <= 1; rowOffset++) {
+                for (let colOffset = -1; colOffset <= 1; colOffset++) {
+                    if (rowOffset === 0 && colOffset === 0) continue; // skip the cell itself
+
+                    const neighborRow = row + rowOffset;
+                    const neighborCol = col + colOffset;
+
+                    // make sure we don't go outside the grid
+                    if (neighborRow >= 0 && neighborRow < numRows && neighborCol >= 0 && neighborCol < numColumns) {
+                        count += grid[neighborRow][neighborCol];
+                    }
+                }
+            }
+            return count;
+        }
+
+        const stepBtn = document.getElementById('stepBtn');
+        const playBtn = document.getElementById('playBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const randomBtn = document.getElementById('randomBtn');
+
+        stepBtn.addEventListener('click', function () {
+            nextGeneration();
+        });
+
+        let isPlaying = false;
+        let playInterval = null;
+
+        playBtn.addEventListener('click', function () {
+            isPlaying = !isPlaying;
+
+            if (isPlaying) {
+                playBtn.textContent = "Pause";
+                playInterval = setInterval(nextGeneration, 200);
+            } else {
+                playBtn.textContent = "Play";
+                clearInterval(playInterval);
+            }
+        });
+
+        clearBtn.addEventListener('click', function () {
+            isPlaying = false;
+            playBtn.textContent = "Play";
+            clearInterval(playInterval);
+
+            for (let row = 0; row < numRows; row++) {
+                for (let col = 0; col < numColumns; col++) {
+                    grid[row][col] = 0;
+                }
+            }
+            drawGrid();
+        });
+
+        randomBtn.addEventListener('click', function () {
+            for (let row = 0; row < numRows; row++) {
+                for (let col = 0; col < numColumns; col++) {
+                    grid[row][col] = Math.random() < 0.3 ? 1 : 0;
+                }
+            }
+            drawGrid();
+        });
+    </script>
+
+</body>
+
+</html>
